@@ -81,6 +81,7 @@ async function createMarkUp() {
         const { hits, totalHits } = data;
 
         if (hits.length === 0) {
+            spinner.stop();
             return Notify.failure('Sorry, there are no images matching your search query. Please try again.');
         }
 
@@ -141,5 +142,6 @@ function smoothScroll() {
     const { height: cardHeight } = gallery.firstElementChild.getBoundingClientRect();
     window.scrollBy({
         top: cardHeight*2,
-        behavior: "smooth",});
+        behavior: "smooth",
+    });
 }
