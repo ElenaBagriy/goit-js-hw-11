@@ -43,9 +43,8 @@
     color: var(--second-color);
 
     transition-property: background-color, color, scale;
-        transition-duration: 250ms;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-
+    transition-duration: 250ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
         scale: 1.05;

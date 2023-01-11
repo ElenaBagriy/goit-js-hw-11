@@ -1,8 +1,8 @@
 import { Notify } from "notiflix";
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
-import axios from "axios";
 import { Spinner } from 'spin.js';
+import { APIService } from "./partials/js/photo-service";
 
 var optsForSpinner = {
     lines: 13, // The number of lines to draw
@@ -25,9 +25,6 @@ var optsForSpinner = {
     position: 'absolute', // Element positioning
 };
 
-const API_KEY = '32675629-6d03a52af7160c0ed7727c460';
-const BASE_URL = 'https://pixabay.com/api/';
-
 const gallery = document.querySelector('.gallery');
 const formEl = document.querySelector('.search-form');
 const loadMoreButton = document.querySelector('.load-more');  
@@ -35,8 +32,6 @@ const submitButton = document.querySelector('.search-btn')
 const body = document.querySelector('body')
 
 loadMoreButton.classList.add('is-hidden');
-let query = '';
-let page = 1;
 let amountOfImages = 0;
 let lightbox = new SimpleLightbox('.gallery a');
 let spinner = new Spinner(optsForSpinner).spin();
@@ -49,21 +44,20 @@ loadMoreButton.addEventListener('click', onLoadMore);
 Notify.init({
     width: '400px',
     position: 'left-top',
-    showOnlyTheLastOne: true,
     clickToClose: true,
 });
 
 function onFormSubmit(e) {
     e.preventDefault();
     setTimeout(() => {submitButton.blur();}, 250)
+    loadMoreButton.classList.add('is-hidden');
+    gallery.innerHTML = '';
 
-    if (!query) {
+    if (APIService.query === '') {
         return Notify.failure('Sorry, there are no images matching your search query. Please try again.');
     }
     
-    loadMoreButton.classList.add('is-hidden');
-    gallery.innerHTML = '';
-    page = 1;
+    APIService.resetPage();
     amountOfImages = 0;
     spinner.spin();
     body.appendChild(spinner.el);
@@ -71,7 +65,7 @@ function onFormSubmit(e) {
 }
 
 function onFormInput(e) {
-    query = e.target.value.trim();
+    APIService.query = e.target.value.trim();
 }
 
 function onLoadMore() {
@@ -83,7 +77,9 @@ function onLoadMore() {
 
 async function createMarkUp() {
     try {
-        const { hits, totalHits } = await getArticles();
+        const data = await APIService.getArticles();
+        const { hits, totalHits } = data;
+
         if (hits.length === 0) {
             return Notify.failure('Sorry, there are no images matching your search query. Please try again.');
         }
@@ -92,15 +88,11 @@ async function createMarkUp() {
             Notify.success(`Hooray! We found ${totalHits} images.`);
         }
 
-        hits.map(hit => {
+        const markUp = hits.map(hit => {
             const { webformatURL, largeImageURL, tags, likes, views, comments, downloads } = hit;
             amountOfImages += 1;
-            if (amountOfImages >= totalHits) {
-                loadMoreButton.classList.add('is-hidden');
-                return Notify.info(`We're sorry, but you've reached the end of search results.`);
-            }
         
-            const markUp = `<div class="photo-card">
+            return`<div class="photo-card">
             <a href="${largeImageURL}">
             <img src="${webformatURL}" alt="${tags}" loading="lazy" />
             <div class="info">
@@ -122,38 +114,32 @@ async function createMarkUp() {
             </div>
             </a>
             </div>`;
-        
-            gallery.insertAdjacentHTML('beforeend', markUp);
-            loadMoreButton.classList.remove('is-hidden');
         });
-        
+
+        gallery.insertAdjacentHTML('beforeend', markUp.join(''));
+        loadMoreButton.classList.remove('is-hidden');  
+
         lightbox.refresh();
 
-        if (page > 2) {
+        if (APIService.page > 2) {
             smoothScroll();
         }
 
         spinner.stop();
+
+        if (amountOfImages >= totalHits) {
+            loadMoreButton.classList.add('is-hidden');
+            return Notify.info(`We're sorry, but you've reached the end of search results.`);
+        }
 
     } catch (error) {
         console.log(error)
     }
 }
 
-async function getArticles() {
-    const url = `${BASE_URL}?key=${API_KEY}&q=${query}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=40`;
-    page += 1;
-    const response = await axios.get(url);
-    const { data } = response;
-    return data;
-}
-
 function smoothScroll() {
-
     const { height: cardHeight } = gallery.firstElementChild.getBoundingClientRect();
     window.scrollBy({
         top: cardHeight*2,
         behavior: "smooth",});
 }
-
-
