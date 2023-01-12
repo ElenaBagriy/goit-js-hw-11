@@ -1,8 +1,12 @@
+import throttle from "lodash.throttle";
 import { Notify } from "notiflix";
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
 import { Spinner } from 'spin.js';
-import { APIService } from "./partials/js/photo-service";
+import { APIService } from "./js/photo-service";
+import 'material-icons/iconfont/material-icons.css';
+import { onScroll, onToTopBtn } from "./js/scroll-to-top";
+import { smoothScroll } from "./js/smooth-scroll";
 
 var optsForSpinner = {
     lines: 13, // The number of lines to draw
@@ -30,16 +34,23 @@ const formEl = document.querySelector('.search-form');
 const loadMoreButton = document.querySelector('.load-more');  
 const submitButton = document.querySelector('.search-btn')
 const body = document.querySelector('body')
+const toTopBtn = document.querySelector('.btn-to-top');
+const infiniteBtn = document.querySelector('.if-btn');
 
 loadMoreButton.classList.add('is-hidden');
-let amountOfImages = 0;
+
 let lightbox = new SimpleLightbox('.gallery a');
 let spinner = new Spinner(optsForSpinner).spin();
-
+let amountOfImages = 0;
+let isLoading = false;
+let shouldLoad = true;
 
 formEl.addEventListener('submit', onFormSubmit);
 formEl.addEventListener('input', onFormInput);
 loadMoreButton.addEventListener('click', onLoadMore);
+window.addEventListener('scroll', onScroll);
+toTopBtn.addEventListener('click', onToTopBtn);
+infiniteBtn.addEventListener('click', () => {window.addEventListener('scroll', throttle(checkPosition, 250))})
 
 Notify.init({
     width: '400px',
@@ -68,11 +79,23 @@ function onFormInput(e) {
     APIService.query = e.target.value.trim();
 }
 
-function onLoadMore() {
+async function onLoadMore() {
+    if (isLoading || !shouldLoad) {
+        return;
+    }
+
+    if (APIService.query === '') {
+        return;
+    }
+    
+    isLoading = true
     loadMoreButton.classList.add('is-hidden');
     spinner.spin();
     body.appendChild(spinner.el);
-    createMarkUp();
+
+    await createMarkUp();
+
+    isLoading = false;
 }
 
 async function createMarkUp() {
@@ -82,9 +105,17 @@ async function createMarkUp() {
 
         if (hits.length === 0) {
             spinner.stop();
+            shouldLoad = false;
+            // window.removeEventListener('scroll', checkPosition);
             return Notify.failure('Sorry, there are no images matching your search query. Please try again.');
         }
 
+        if (amountOfImages >= totalHits) {
+            return;
+        }
+        
+        shouldLoad = true;
+        
         if (amountOfImages === 0) {
             Notify.success(`Hooray! We found ${totalHits} images.`);
         }
@@ -94,7 +125,7 @@ async function createMarkUp() {
             amountOfImages += 1;
         
             return`<div class="photo-card">
-            <a href="${largeImageURL}">
+            <a class="pagination__next" href="${largeImageURL}">
             <img src="${webformatURL}" alt="${tags}" loading="lazy" />
             <div class="info">
             <p class="info-item"><b>Likes</b>
@@ -118,6 +149,7 @@ async function createMarkUp() {
         });
 
         gallery.insertAdjacentHTML('beforeend', markUp.join(''));
+        
         loadMoreButton.classList.remove('is-hidden');  
 
         lightbox.refresh();
@@ -130,6 +162,8 @@ async function createMarkUp() {
 
         if (amountOfImages >= totalHits) {
             loadMoreButton.classList.add('is-hidden');
+            shouldLoad = false;
+            // window.removeEventListener('scroll', checkPosition) 
             return Notify.info(`We're sorry, but you've reached the end of search results.`);
         }
 
@@ -138,10 +172,14 @@ async function createMarkUp() {
     }
 }
 
-function smoothScroll() {
-    const { height: cardHeight } = gallery.firstElementChild.getBoundingClientRect();
-    window.scrollBy({
-        top: cardHeight*2,
-        behavior: "smooth",
-    });
+function checkPosition() {
+    const height = document.body.offsetHeight;
+    const screenHeight = window.innerHeight;
+    const scrolled = window.scrollY;
+    const threshold = height - screenHeight / 4;
+    const position = scrolled + screenHeight
+
+    if (position >= threshold) {
+      onLoadMore();
+  }
 }
