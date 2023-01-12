@@ -50,7 +50,18 @@ formEl.addEventListener('input', onFormInput);
 loadMoreButton.addEventListener('click', onLoadMore);
 window.addEventListener('scroll', onScroll);
 toTopBtn.addEventListener('click', onToTopBtn);
-infiniteBtn.addEventListener('click', () => {window.addEventListener('scroll', throttle(checkPosition, 250))})
+
+infiniteBtn.addEventListener('click', onIfBtnClick);
+
+function onIfBtnClick() {
+    infiniteBtn.classList.toggle('is-checked');
+
+    if (infiniteBtn.classList.contains('is-checked')) {
+        return window.addEventListener('scroll', throttle(checkPosition, 250));
+    } else {
+        return window.removeEventListener('scroll', checkPosition);
+    }
+}
 
 Notify.init({
     width: '400px',
@@ -173,6 +184,10 @@ async function createMarkUp() {
 }
 
 function checkPosition() {
+
+    if (!infiniteBtn.classList.contains('is-checked')) {
+        return;
+    }
     const height = document.body.offsetHeight;
     const screenHeight = window.innerHeight;
     const scrolled = window.scrollY;

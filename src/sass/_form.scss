@@ -108,8 +108,10 @@
     scale: 1.05;
   }
         
-  &:focus {
+}
+
+.if-btn.is-checked {
     background-color: var(--second-color);
     color: var(--main-color);
-  }
+    scale: 1;
 }
