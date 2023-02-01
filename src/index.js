@@ -90,7 +90,7 @@ function onFormInput(e) {
     APIService.query = e.target.value.trim();
 }
 
-async function onLoadMore() {
+function onLoadMore() {
     if (isLoading || !shouldLoad) {
         return;
     }
@@ -104,14 +104,15 @@ async function onLoadMore() {
     spinner.spin();
     body.appendChild(spinner.el);
 
-    await createMarkUp();
+    createMarkUp();
 
     isLoading = false;
 }
 
 async function createMarkUp() {
     try {
-        const data = await APIService.getArticles();
+        const response = await APIService.getArticles();
+        const { data } = response;
         const { hits, totalHits } = data;
 
         if (hits.length === 0) {

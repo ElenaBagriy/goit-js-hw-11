@@ -6,12 +6,10 @@ export const APIService = {
     searchQuery: '',
     page: 1,
 
-    async getArticles() {
+    getArticles() {
         const url = `${this.BASE_URL}?key=${this.API_KEY}&q=${this.searchQuery}&image_type=photo&orientation=horizontal&safesearch=true&page=${this.page}&per_page=40`;
         this.incrementPage();
-        const response = await axios.get(url);
-        const { data } = response;
-        return data;
+        return axios.get(url);
     },
 
     incrementPage() {
